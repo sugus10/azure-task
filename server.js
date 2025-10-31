@@ -178,6 +178,19 @@ async function initializeDatabase() {
       )
     `);
     
+    // Insert some sample data if table is empty
+    const countResult = await request.query('SELECT COUNT(*) as count FROM Items');
+    if (countResult.recordset[0].count === 0) {
+      console.log('Adding sample data...');
+      await request.query(`
+        INSERT INTO Items (name, description, createdAt)
+        VALUES 
+          ('Sample Item 1', 'This is a sample item for demonstration', GETDATE()),
+          ('Sample Item 2', 'Another example item to show CRUD functionality', GETDATE()),
+          ('Sample Item 3', 'A third item to populate the initial view', GETDATE())
+      `);
+    }
+    
     console.log('Database initialized successfully');
   } catch (err) {
     console.error('Error initializing database:', err);

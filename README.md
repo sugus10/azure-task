@@ -71,7 +71,7 @@ The infrastructure consists of:
 ### Azure SQL Database
 
 - SQL Server and Database deployed in West US
-- Connection string stored as a secret in Key Vault with name "name_surname_1"
+- Connection string stored as a secret in Key Vault with name "namesurname1"
 
 ### Traffic Manager
 

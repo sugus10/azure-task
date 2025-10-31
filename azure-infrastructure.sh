@@ -10,14 +10,15 @@ LOCATION_SQL="westus"
 RESOURCE_GROUP_SQL="WestUSResourceGroup"
 APP_SERVICE_PLAN_EAST="EastUSAppServicePlan"
 APP_SERVICE_PLAN_CENTRAL="CentralUSAppServicePlan"
-WEBAPP_EAST="EastUSWebApp"
-WEBAPP_CENTRAL="CentralUSWebApp"
+# Adding timestamp for uniqueness in web app names
+WEBAPP_EAST="EastUSWebApp$(date +%s)"
+WEBAPP_CENTRAL="CentralUSWebApp$(date +%s)"
 KEY_VAULT_NAME="MyKeyVault$(date +%s)"  # Adding timestamp for uniqueness
 SQL_SERVER_NAME="sqlserver$(date +%s)"  # Adding timestamp for uniqueness
 SQL_DB_NAME="myDatabase"
 SQL_ADMIN_USER="sqladmin"
 SQL_ADMIN_PASSWORD="P@ssw0rd$(date +%s)"  # Adding timestamp for uniqueness
-SECRET_NAME="name_surname_1"
+SECRET_NAME="namesurname1"
 TRAFFIC_MANAGER_NAME="myTrafficManager$(date +%s)"  # Adding timestamp for uniqueness
 TRAFFIC_MANAGER_DNS="mytrafficmanager$(date +%s)"  # Adding timestamp for uniqueness
 
