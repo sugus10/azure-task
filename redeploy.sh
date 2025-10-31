@@ -11,10 +11,18 @@ echo "Redeploying application with connection string fix..."
 # Create deployment package (without web.config - Azure handles Node.js apps automatically)
 echo "Creating deployment package..."
 if command -v zip &> /dev/null; then
-    zip -r deployment.zip server.js package.json public/ -x "*.git*" "node_modules/*"
+    if [ -f .deployment ]; then
+        zip -r deployment.zip server.js package.json public/ .deployment -x "*.git*" "node_modules/*"
+    else
+        zip -r deployment.zip server.js package.json public/ -x "*.git*" "node_modules/*"
+    fi
 else
     echo "zip command not found, using PowerShell instead..."
-    powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+    if [ -f .deployment ]; then
+        powershell -Command "Compress-Archive -Path server.js,package.json,public/*,.deployment -DestinationPath deployment.zip -Force"
+    else
+        powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+    fi
 fi
 
 # Deploy to both web apps
