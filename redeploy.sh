@@ -8,17 +8,13 @@ RESOURCE_GROUP_CENTRAL="CentralUSResourceGroup"
 
 echo "Redeploying application with connection string fix..."
 
-# Create deployment package
+# Create deployment package (without web.config - Azure handles Node.js apps automatically)
 echo "Creating deployment package..."
 if command -v zip &> /dev/null; then
-    zip -r deployment.zip server.js package.json public/ web.config 2>/dev/null || zip -r deployment.zip server.js package.json public/
+    zip -r deployment.zip server.js package.json public/ -x "*.git*" "node_modules/*"
 else
     echo "zip command not found, using PowerShell instead..."
-    if [ -f web.config ]; then
-        powershell -Command "Compress-Archive -Path server.js,package.json,public/*,web.config -DestinationPath deployment.zip -Force"
-    else
-        powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
-    fi
+    powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
 fi
 
 # Deploy to both web apps

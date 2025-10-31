@@ -1,18 +1,33 @@
+// Log immediately to ensure we can see this in Azure logs
+console.log('========================================');
+console.log('Application starting...');
+console.log('Time:', new Date().toISOString());
+console.log('Node version:', process.version);
+console.log('========================================');
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const sql = require('mssql');
 const path = require('path');
 
+console.log('Express and other modules loaded successfully');
+
 // Initialize Express app
 const app = express();
 const port = process.env.PORT || 3000;
+
+console.log('Express app initialized, port:', port);
+
+console.log('Setting up middleware...');
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+console.log('Middleware configured, static files from:', path.join(__dirname, 'public'));
 
 // Database configuration
 // Parse connection string from Key Vault or use individual env vars
@@ -56,6 +71,8 @@ function parseConnectionString(connStr) {
 let pool;
 let poolConnect;
 
+console.log('Starting database configuration...');
+
 if (process.env.ConnectionString) {
   console.log('Using connection string from Key Vault');
   const connStr = process.env.ConnectionString;
@@ -87,29 +104,40 @@ if (process.env.ConnectionString) {
   }
 } else {
   console.log('Using individual environment variables');
-  const dbConfig = {
-    server: process.env.DB_SERVER || 'localhost',
-    database: process.env.DB_DATABASE || 'myDatabase',
-    user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || 'YourPassword',
-    port: parseInt(process.env.DB_PORT || '1433'),
-    options: {
-      encrypt: true,
-      enableArithAbort: true,
-      trustServerCertificate: false
-    }
-  };
-  pool = new sql.ConnectionPool(dbConfig);
-  poolConnect = pool.connect();
+  try {
+    const dbConfig = {
+      server: process.env.DB_SERVER || 'localhost',
+      database: process.env.DB_DATABASE || 'myDatabase',
+      user: process.env.DB_USER || 'sa',
+      password: process.env.DB_PASSWORD || 'YourPassword',
+      port: parseInt(process.env.DB_PORT || '1433'),
+      options: {
+        encrypt: true,
+        enableArithAbort: true,
+        trustServerCertificate: false
+      }
+    };
+    pool = new sql.ConnectionPool(dbConfig);
+    poolConnect = pool.connect();
+    console.log('Database connection pool created with individual env vars');
+  } catch (err) {
+    console.error('Error creating database connection pool:', err);
+    poolConnect = Promise.reject(err);
+  }
 }
+
+console.log('Database configuration completed');
 
 // Handle database connection errors
 poolConnect.catch(err => {
   console.error('Error connecting to database:', err);
 });
 
+console.log('Setting up routes...');
+
 // Simple test route
 app.get('/test', (req, res) => {
+  console.log('GET /test called');
   res.json({ message: 'Server is running!', timestamp: new Date().toISOString() });
 });
 
