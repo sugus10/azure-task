@@ -1,3 +1,20 @@
+// Add error handlers FIRST, before anything else
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('========================================');
+  console.error('Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  console.error('Stack:', reason && reason.stack ? reason.stack : 'No stack trace');
+  console.error('========================================');
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('========================================');
+  console.error('Uncaught Exception:', err);
+  console.error('Stack:', err.stack);
+  console.error('========================================');
+  // Don't exit, let the app continue
+});
+
 // Log immediately to ensure we can see this in Azure logs
 console.log('========================================');
 console.log('Application starting...');
@@ -318,11 +335,6 @@ async function initializeDatabase() {
     console.error('Error initializing database:', err);
   }
 }
-
-// Add error handler for unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
 
 // Start the server
 const server = app.listen(port, () => {
