@@ -38,12 +38,27 @@ else
     fi
 fi
 
+# Ensure configuration is correct before deployment
+echo "Configuring web apps..."
+az webapp config set --name $WEBAPP_EAST --resource-group $RESOURCE_GROUP_EAST --startup-file "npm start" --always-on true
+az webapp config set --name $WEBAPP_CENTRAL --resource-group $RESOURCE_GROUP_CENTRAL --startup-file "npm start" --always-on true
+
+az webapp config appsettings set --name $WEBAPP_EAST --resource-group $RESOURCE_GROUP_EAST \
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true WEBSITE_NODE_DEFAULT_VERSION="~16" --output none
+
+az webapp config appsettings set --name $WEBAPP_CENTRAL --resource-group $RESOURCE_GROUP_CENTRAL \
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true WEBSITE_NODE_DEFAULT_VERSION="~16" --output none
+
 # Deploy to both web apps
 echo "Deploying to East US Web App..."
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP_EAST --name $WEBAPP_EAST --src deployment.zip
 
 echo "Deploying to Central US Web App..."
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP_CENTRAL --name $WEBAPP_CENTRAL --src deployment.zip
+
+# Wait a bit for deployment to process
+echo "Waiting for deployment to process..."
+sleep 10
 
 # Restart web apps to ensure they pick up changes
 echo "Restarting web apps..."
