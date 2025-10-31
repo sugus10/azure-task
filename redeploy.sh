@@ -11,10 +11,14 @@ echo "Redeploying application with connection string fix..."
 # Create deployment package
 echo "Creating deployment package..."
 if command -v zip &> /dev/null; then
-    zip -r deployment.zip server.js package.json public/
+    zip -r deployment.zip server.js package.json public/ web.config 2>/dev/null || zip -r deployment.zip server.js package.json public/
 else
     echo "zip command not found, using PowerShell instead..."
-    powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+    if [ -f web.config ]; then
+        powershell -Command "Compress-Archive -Path server.js,package.json,public/*,web.config -DestinationPath deployment.zip -Force"
+    else
+        powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+    fi
 fi
 
 # Deploy to both web apps

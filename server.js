@@ -108,6 +108,11 @@ poolConnect.catch(err => {
   console.error('Error connecting to database:', err);
 });
 
+// Simple test route
+app.get('/test', (req, res) => {
+  res.json({ message: 'Server is running!', timestamp: new Date().toISOString() });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -286,10 +291,28 @@ async function initializeDatabase() {
   }
 }
 
+// Add error handler for unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Start the server
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  initializeDatabase();
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`ConnectionString env var exists: ${process.env.ConnectionString ? 'Yes' : 'No'}`);
+  // Initialize database in background, don't block server startup
+  initializeDatabase().catch(err => {
+    console.error('Database initialization failed, but server is still running:', err);
+  });
+});
+
+// Add error handler for server
+server.on('error', (err) => {
+  console.error('Server error:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use`);
+  }
 });
 
 // Handle shutdown gracefully
