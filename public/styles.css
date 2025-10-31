@@ -1,0 +1,89 @@
+/* Custom styles for the CRUD application */
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+.footer {
+  margin-top: auto;
+}
+
+.card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.item-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-card .card-body {
+  flex: 1;
+}
+
+.item-card .card-title {
+  font-weight: 600;
+  color: #0d6efd;
+}
+
+.item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.timestamp {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.btn-icon {
+  padding: 0.25rem 0.5rem;
+}
+
+#loading .spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+#emptyState i {
+  font-size: 4rem;
+  opacity: 0.5;
+}
+
+.modal-header {
+  background-color: #f8f9fa;
+}
+
+.navbar-brand {
+  font-weight: 600;
+}
+
+/* Animation for new items */
+@keyframes highlightNew {
+  0% { background-color: rgba(13, 110, 253, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.highlight-new {
+  animation: highlightNew 2s ease-out;
+}
+
+/* Animation for updated items */
+@keyframes highlightUpdate {
+  0% { background-color: rgba(255, 193, 7, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.highlight-update {
+  animation: highlightUpdate 2s ease-out;
+}
