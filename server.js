@@ -299,7 +299,14 @@ app.delete('/api/items/:id', async (req, res) => {
 
 // Serve the main HTML page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  try {
+    const indexPath = path.join(__dirname, 'public', 'index.html');
+    console.log('Serving index.html from:', indexPath);
+    res.sendFile(indexPath);
+  } catch (err) {
+    console.error('Error serving index.html:', err);
+    res.status(500).send('Error loading page');
+  }
 });
 
 // Initialize database
