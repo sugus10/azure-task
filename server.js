@@ -173,6 +173,9 @@ app.get('/api/health', (req, res) => {
 app.get('/api/items', async (req, res) => {
   console.log('GET /api/items called');
   try {
+    if (!pool) {
+      return res.status(500).json({ error: 'Database connection pool not initialized' });
+    }
     console.log('Waiting for database connection...');
     await poolConnect;
     console.log('Database connected, executing query...');
