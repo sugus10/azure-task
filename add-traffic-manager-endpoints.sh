@@ -24,7 +24,7 @@ az network traffic-manager endpoint create \
   --profile-name $TRAFFIC_MANAGER_NAME \
   --resource-group $RESOURCE_GROUP_EAST \
   --type azureEndpoints \
-  --target-resource-id $EAST_WEBAPP_ID \
+  --target-resource-id "$EAST_WEBAPP_ID" \
   --endpoint-status Enabled
 
 # 3. Add the Central US Web App as an endpoint to Traffic Manager
@@ -34,7 +34,7 @@ az network traffic-manager endpoint create \
   --profile-name $TRAFFIC_MANAGER_NAME \
   --resource-group $RESOURCE_GROUP_EAST \
   --type azureEndpoints \
-  --target-resource-id $CENTRAL_WEBAPP_ID \
+  --target-resource-id "$CENTRAL_WEBAPP_ID" \
   --endpoint-status Enabled
 
 echo "Traffic Manager endpoints added successfully!"
