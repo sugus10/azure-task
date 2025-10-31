@@ -54,7 +54,11 @@ az keyvault create --name $KEY_VAULT_NAME --resource-group $RESOURCE_GROUP_EAST 
 
 # 6. Create SQL Server and Database in West US
 echo "Creating SQL Server and Database in West US..."
-az sql server create --name $SQL_SERVER_NAME --resource-group $RESOURCE_GROUP_WEST --location $LOCATION_WEST --admin-user $SQL_ADMIN_USER --admin-password $SQL_ADMIN_PASSWORD
+az sql server create --name $SQL_SERVER_NAME --resource-group $RESOURCE_GROUP_WEST --location $LOCATION_WEST --admin-user $SQL_ADMIN_USER --admin-password "$SQL_ADMIN_PASSWORD"
+
+# Wait a moment for the SQL server to be fully provisioned
+echo "Waiting for SQL server to be fully provisioned..."
+sleep 30
 
 # Allow Azure services to access the server
 echo "Allowing Azure services to access SQL Server..."
@@ -94,8 +98,32 @@ echo "Adding Web Apps as Endpoints to Traffic Manager..."
 EAST_WEBAPP_ID=$(az webapp show --name $WEBAPP_EAST --resource-group $RESOURCE_GROUP_EAST --query id --output tsv)
 CENTRAL_WEBAPP_ID=$(az webapp show --name $WEBAPP_CENTRAL --resource-group $RESOURCE_GROUP_CENTRAL --query id --output tsv)
 
-az network traffic-manager endpoint create --name "EastUSEndpoint" --profile-name $TRAFFIC_MANAGER_NAME --resource-group $RESOURCE_GROUP_EAST --type azureEndpoints --target-resource-id "$EAST_WEBAPP_ID" --endpoint-status Enabled
-az network traffic-manager endpoint create --name "CentralUSEndpoint" --profile-name $TRAFFIC_MANAGER_NAME --resource-group $RESOURCE_GROUP_EAST --type azureEndpoints --target-resource-id "$CENTRAL_WEBAPP_ID" --endpoint-status Enabled
+# Make sure we have valid resource IDs
+if [ -n "$EAST_WEBAPP_ID" ]; then
+    echo "Adding East US Web App as endpoint..."
+    az network traffic-manager endpoint create \
+      --name "EastUSEndpoint" \
+      --profile-name $TRAFFIC_MANAGER_NAME \
+      --resource-group $RESOURCE_GROUP_EAST \
+      --type azureEndpoints \
+      --target-resource-id "$EAST_WEBAPP_ID" \
+      --endpoint-status Enabled
+else
+    echo "Warning: Could not get East US Web App ID"
+fi
+
+if [ -n "$CENTRAL_WEBAPP_ID" ]; then
+    echo "Adding Central US Web App as endpoint..."
+    az network traffic-manager endpoint create \
+      --name "CentralUSEndpoint" \
+      --profile-name $TRAFFIC_MANAGER_NAME \
+      --resource-group $RESOURCE_GROUP_EAST \
+      --type azureEndpoints \
+      --target-resource-id "$CENTRAL_WEBAPP_ID" \
+      --endpoint-status Enabled
+else
+    echo "Warning: Could not get Central US Web App ID"
+fi
 
 # 12. Create SQL script for database setup
 echo "Creating SQL script for database setup..."
