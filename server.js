@@ -15,22 +15,67 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Database configuration
-// First try to use the ConnectionString from Key Vault, then fall back to individual env vars
-let dbConfig;
-
-if (process.env.ConnectionString) {
-  console.log('Using connection string from Key Vault');
-  dbConfig = {
-    connectionString: process.env.ConnectionString,
+// Parse connection string from Key Vault or use individual env vars
+function parseConnectionString(connStr) {
+  const config = {
     options: {
       encrypt: true,
       enableArithAbort: true,
-      trustServerCertificate: true // For local dev only
+      trustServerCertificate: false
     }
   };
+  
+  const parts = connStr.split(';');
+  parts.forEach(part => {
+    const [key, value] = part.split('=').map(s => s.trim());
+    if (!key || !value) return;
+    
+    switch (key.toLowerCase()) {
+      case 'server':
+        const serverMatch = value.match(/tcp:(.+),(\d+)/);
+        if (serverMatch) {
+          config.server = serverMatch[1];
+          config.port = parseInt(serverMatch[2]);
+        }
+        break;
+      case 'initial catalog':
+        config.database = value;
+        break;
+      case 'user id':
+        config.user = value;
+        break;
+      case 'password':
+        config.password = value;
+        break;
+    }
+  });
+  
+  return config;
+}
+
+let pool;
+let poolConnect;
+
+if (process.env.ConnectionString) {
+  console.log('Using connection string from Key Vault');
+  const connStr = process.env.ConnectionString;
+  console.log('Connection string present:', connStr ? 'Yes' : 'No');
+  if (connStr) {
+    try {
+      const dbConfig = parseConnectionString(connStr);
+      console.log('Parsed database config:', { server: dbConfig.server, database: dbConfig.database, user: dbConfig.user });
+      pool = new sql.ConnectionPool(dbConfig);
+      poolConnect = pool.connect();
+    } catch (err) {
+      console.error('Error parsing connection string:', err);
+      poolConnect = Promise.reject(err);
+    }
+  } else {
+    poolConnect = Promise.reject(new Error('Connection string is empty'));
+  }
 } else {
   console.log('Using individual environment variables');
-  dbConfig = {
+  const dbConfig = {
     server: process.env.DB_SERVER || 'localhost',
     database: process.env.DB_DATABASE || 'myDatabase',
     user: process.env.DB_USER || 'sa',
@@ -39,14 +84,12 @@ if (process.env.ConnectionString) {
     options: {
       encrypt: true,
       enableArithAbort: true,
-      trustServerCertificate: true // For local dev only
+      trustServerCertificate: false
     }
   };
+  pool = new sql.ConnectionPool(dbConfig);
+  poolConnect = pool.connect();
 }
-
-// Create SQL connection pool
-const pool = new sql.ConnectionPool(dbConfig);
-const poolConnect = pool.connect();
 
 // Handle database connection errors
 poolConnect.catch(err => {
