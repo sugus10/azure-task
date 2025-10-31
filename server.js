@@ -60,12 +60,24 @@ if (process.env.ConnectionString) {
   console.log('Using connection string from Key Vault');
   const connStr = process.env.ConnectionString;
   console.log('Connection string present:', connStr ? 'Yes' : 'No');
-  if (connStr) {
+  console.log('Connection string starts with:', connStr ? connStr.substring(0, 50) : 'N/A');
+  
+  // Check if Key Vault reference wasn't resolved
+  if (connStr && connStr.startsWith('@Microsoft.KeyVault')) {
+    console.error('ERROR: Key Vault reference not resolved! The connection string still contains the reference format.');
+    console.error('This usually means the managed identity does not have proper permissions to access Key Vault.');
+    poolConnect = Promise.reject(new Error('Key Vault reference not resolved - check managed identity permissions'));
+  } else if (connStr) {
     try {
       const dbConfig = parseConnectionString(connStr);
       console.log('Parsed database config:', { server: dbConfig.server, database: dbConfig.database, user: dbConfig.user });
       pool = new sql.ConnectionPool(dbConfig);
       poolConnect = pool.connect();
+      poolConnect.then(() => {
+        console.log('Database connection pool established successfully');
+      }).catch(err => {
+        console.error('Failed to establish database connection pool:', err);
+      });
     } catch (err) {
       console.error('Error parsing connection string:', err);
       poolConnect = Promise.reject(err);
@@ -96,17 +108,36 @@ poolConnect.catch(err => {
   console.error('Error connecting to database:', err);
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    connectionString: process.env.ConnectionString ? 'Present' : 'Missing',
+    nodeVersion: process.version
+  });
+});
+
 // API Routes
 // Get all items
 app.get('/api/items', async (req, res) => {
+  console.log('GET /api/items called');
   try {
+    console.log('Waiting for database connection...');
     await poolConnect;
+    console.log('Database connected, executing query...');
     const request = pool.request();
     const result = await request.query('SELECT * FROM Items');
+    console.log('Query successful, returning', result.recordset.length, 'items');
     res.json(result.recordset);
   } catch (err) {
     console.error('Error fetching items:', err);
-    res.status(500).json({ error: 'Failed to fetch items' });
+    console.error('Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+    res.status(500).json({ 
+      error: 'Failed to fetch items', 
+      message: err.message,
+      code: err.code 
+    });
   }
 });
 
