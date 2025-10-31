@@ -15,19 +15,34 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Database configuration
-// In production, this will be replaced by KeyVault reference
-const dbConfig = {
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_DATABASE || 'myDatabase',
-  user: process.env.DB_USER || 'sa',
-  password: process.env.DB_PASSWORD || 'YourPassword',
-  port: parseInt(process.env.DB_PORT || '1433'),
-  options: {
-    encrypt: true,
-    enableArithAbort: true,
-    trustServerCertificate: true // For local dev only
-  }
-};
+// First try to use the ConnectionString from Key Vault, then fall back to individual env vars
+let dbConfig;
+
+if (process.env.ConnectionString) {
+  console.log('Using connection string from Key Vault');
+  dbConfig = {
+    connectionString: process.env.ConnectionString,
+    options: {
+      encrypt: true,
+      enableArithAbort: true,
+      trustServerCertificate: true // For local dev only
+    }
+  };
+} else {
+  console.log('Using individual environment variables');
+  dbConfig = {
+    server: process.env.DB_SERVER || 'localhost',
+    database: process.env.DB_DATABASE || 'myDatabase',
+    user: process.env.DB_USER || 'sa',
+    password: process.env.DB_PASSWORD || 'YourPassword',
+    port: parseInt(process.env.DB_PORT || '1433'),
+    options: {
+      encrypt: true,
+      enableArithAbort: true,
+      trustServerCertificate: true // For local dev only
+    }
+  };
+}
 
 // Create SQL connection pool
 const pool = new sql.ConnectionPool(dbConfig);
