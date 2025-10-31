@@ -1,10 +1,23 @@
 #!/bin/bash
 
 # Variables
-WEBAPP_EAST="EastUSWebApp1761914463"
-WEBAPP_CENTRAL="CentralUSWebApp1761914463"
 RESOURCE_GROUP_EAST="EastUSResourceGroup"
 RESOURCE_GROUP_CENTRAL="CentralUSResourceGroup"
+
+# Auto-detect web app names
+echo "Detecting web app names..."
+WEBAPP_EAST=$(az webapp list --resource-group $RESOURCE_GROUP_EAST --query "[0].name" -o tsv)
+WEBAPP_CENTRAL=$(az webapp list --resource-group $RESOURCE_GROUP_CENTRAL --query "[0].name" -o tsv)
+
+if [ -z "$WEBAPP_EAST" ] || [ -z "$WEBAPP_CENTRAL" ]; then
+    echo "Error: Could not detect web app names. Please check resource groups."
+    exit 1
+fi
+
+echo "Found Web Apps:"
+echo "  East US: $WEBAPP_EAST"
+echo "  Central US: $WEBAPP_CENTRAL"
+echo ""
 
 echo "Redeploying application with connection string fix..."
 
