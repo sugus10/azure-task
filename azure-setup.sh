@@ -79,15 +79,30 @@ echo "Setting Key Vault Access Policies for Web Apps..."
 az keyvault set-policy --name $KEY_VAULT_NAME --object-id $EAST_PRINCIPAL_ID --secret-permissions get list
 az keyvault set-policy --name $KEY_VAULT_NAME --object-id $CENTRAL_PRINCIPAL_ID --secret-permissions get list
 
-# 9. Configure Web Apps to use Key Vault Reference
-echo "Configuring Web Apps to use Key Vault Reference..."
+# 9. Configure Web Apps to use Key Vault Reference and startup settings
+echo "Configuring Web Apps to use Key Vault Reference and startup settings..."
+
+# Configure East US Web App
 az webapp config appsettings set --name $WEBAPP_EAST --resource-group $RESOURCE_GROUP_EAST \
   --settings "ConnectionString=@Microsoft.KeyVault(VaultName=$KEY_VAULT_NAME;SecretName=$SECRET_NAME;SecretVersion=)" \
-  "WEBSITE_NODE_DEFAULT_VERSION=~16"
+  "WEBSITE_NODE_DEFAULT_VERSION=~16" \
+  "SCM_DO_BUILD_DURING_DEPLOYMENT=true" \
+  --output none
 
+az webapp config set --name $WEBAPP_EAST --resource-group $RESOURCE_GROUP_EAST \
+  --startup-file "npm start" \
+  --always-on true
+
+# Configure Central US Web App
 az webapp config appsettings set --name $WEBAPP_CENTRAL --resource-group $RESOURCE_GROUP_CENTRAL \
   --settings "ConnectionString=@Microsoft.KeyVault(VaultName=$KEY_VAULT_NAME;SecretName=$SECRET_NAME;SecretVersion=)" \
-  "WEBSITE_NODE_DEFAULT_VERSION=~16"
+  "WEBSITE_NODE_DEFAULT_VERSION=~16" \
+  "SCM_DO_BUILD_DURING_DEPLOYMENT=true" \
+  --output none
+
+az webapp config set --name $WEBAPP_CENTRAL --resource-group $RESOURCE_GROUP_CENTRAL \
+  --startup-file "npm start" \
+  --always-on true
 
 # 10. Create Traffic Manager Profile
 echo "Creating Traffic Manager Profile..."
@@ -151,17 +166,34 @@ EOF
 # 13. Create deployment package
 echo "Creating deployment package..."
 if command -v zip &> /dev/null; then
-    zip -r deployment.zip server.js package.json public/
+    if [ -f .deployment ]; then
+        zip -r deployment.zip server.js package.json public/ .deployment -x "*.git*" "node_modules/*"
+    else
+        zip -r deployment.zip server.js package.json public/ -x "*.git*" "node_modules/*"
+    fi
 else
     # Fallback to PowerShell for Windows environments
     echo "zip command not found, using PowerShell instead..."
-    powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+    if [ -f .deployment ]; then
+        powershell -Command "Compress-Archive -Path server.js,package.json,public/*,.deployment -DestinationPath deployment.zip -Force"
+    else
+        powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+    fi
 fi
 
 # 14. Deploy the application to both Web Apps
 echo "Deploying application to Web Apps..."
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP_EAST --name $WEBAPP_EAST --src deployment.zip
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP_CENTRAL --name $WEBAPP_CENTRAL --src deployment.zip
+
+# Wait for deployment to process
+echo "Waiting for deployment to process..."
+sleep 15
+
+# Restart web apps to ensure they pick up all changes
+echo "Restarting web apps to apply configuration..."
+az webapp restart --name $WEBAPP_EAST --resource-group $RESOURCE_GROUP_EAST
+az webapp restart --name $WEBAPP_CENTRAL --resource-group $RESOURCE_GROUP_CENTRAL
 
 echo "Infrastructure deployment completed successfully!"
 echo ""
