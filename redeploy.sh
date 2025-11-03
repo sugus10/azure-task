@@ -23,6 +23,10 @@ echo "Redeploying application with connection string fix..."
 
 # Create deployment package (without web.config - Azure handles Node.js apps automatically)
 echo "Creating deployment package..."
+
+# Remove old deployment zip if exists
+rm -f deployment.zip 2>/dev/null || del deployment.zip 2>nul || true
+
 if command -v zip &> /dev/null; then
     if [ -f .deployment ]; then
         zip -r deployment.zip server.js package.json public/ .deployment -x "*.git*" "node_modules/*"
@@ -31,11 +35,21 @@ if command -v zip &> /dev/null; then
     fi
 else
     echo "zip command not found, using PowerShell instead..."
+    # PowerShell Compress-Archive needs the folder itself, not just contents
+    # Create a temporary structure that preserves folders
     if [ -f .deployment ]; then
-        powershell -Command "Compress-Archive -Path server.js,package.json,public/*,.deployment -DestinationPath deployment.zip -Force"
+        powershell -Command "\$files = @('server.js', 'package.json', 'public', '.deployment'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
     else
-        powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+        powershell -Command "\$files = @('server.js', 'package.json', 'public'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
     fi
+fi
+
+echo "Deployment package created. Verifying structure..."
+if command -v unzip &> /dev/null; then
+    echo "Package contents:"
+    unzip -l deployment.zip | head -20
+elif command -v powershell &> /dev/null; then
+    powershell -Command "Expand-Archive -Path deployment.zip -DestinationPath temp-check -Force; Get-ChildItem -Recurse temp-check | Select-Object FullName; Remove-Item -Recurse -Force temp-check" 2>/dev/null || echo "Could not verify package structure"
 fi
 
 # Ensure configuration is correct before deployment

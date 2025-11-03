@@ -46,9 +46,48 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Serve the main HTML page FIRST (before static middleware)
 app.get('/', (req, res) => {
   try {
+    const fs = require('fs');
     const indexPath = path.join(__dirname, 'public', 'index.html');
     console.log('Root route hit. Serving index.html from:', indexPath);
-    // Send file with absolute path
+    console.log('__dirname:', __dirname);
+    
+    // Check if file exists
+    if (!fs.existsSync(indexPath)) {
+      console.error('File does not exist:', indexPath);
+      // Try alternative paths
+      const altPaths = [
+        path.join(__dirname, 'index.html'),
+        path.join(process.cwd(), 'public', 'index.html'),
+        path.join(process.cwd(), 'index.html')
+      ];
+      
+      console.log('Trying alternative paths...');
+      for (const altPath of altPaths) {
+        console.log('Checking:', altPath);
+        if (fs.existsSync(altPath)) {
+          console.log('Found index.html at:', altPath);
+          return res.sendFile(altPath);
+        }
+      }
+      
+      // List directory contents for debugging
+      try {
+        const publicDir = path.join(__dirname, 'public');
+        console.log('Contents of __dirname:', fs.readdirSync(__dirname));
+        if (fs.existsSync(publicDir)) {
+          console.log('Contents of public directory:', fs.readdirSync(publicDir));
+        } else {
+          console.log('Public directory does not exist:', publicDir);
+        }
+      } catch (listErr) {
+        console.error('Error listing directory:', listErr);
+      }
+      
+      return res.status(404).send('index.html not found. Check deployment package includes public folder.');
+    }
+    
+    // File exists, send it
+    console.log('File exists, sending...');
     res.sendFile(indexPath, (err) => {
       if (err) {
         console.error('Error sending index.html:', err);

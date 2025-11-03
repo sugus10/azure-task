@@ -165,6 +165,10 @@ EOF
 
 # 13. Create deployment package
 echo "Creating deployment package..."
+
+# Remove old deployment zip if exists
+rm -f deployment.zip 2>/dev/null || del deployment.zip 2>nul || true
+
 if command -v zip &> /dev/null; then
     if [ -f .deployment ]; then
         zip -r deployment.zip server.js package.json public/ .deployment -x "*.git*" "node_modules/*"
@@ -174,10 +178,11 @@ if command -v zip &> /dev/null; then
 else
     # Fallback to PowerShell for Windows environments
     echo "zip command not found, using PowerShell instead..."
+    # PowerShell Compress-Archive needs the folder itself, not just contents
     if [ -f .deployment ]; then
-        powershell -Command "Compress-Archive -Path server.js,package.json,public/*,.deployment -DestinationPath deployment.zip -Force"
+        powershell -Command "\$files = @('server.js', 'package.json', 'public', '.deployment'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
     else
-        powershell -Command "Compress-Archive -Path server.js,package.json,public/* -DestinationPath deployment.zip -Force"
+        powershell -Command "\$files = @('server.js', 'package.json', 'public'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
     fi
 fi
 
