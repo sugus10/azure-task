@@ -178,12 +178,21 @@ if command -v zip &> /dev/null; then
 else
     # Fallback to PowerShell for Windows environments
     echo "zip command not found, using PowerShell instead..."
-    # PowerShell Compress-Archive needs the folder itself, not just contents
-    if [ -f .deployment ]; then
-        powershell -Command "\$files = @('server.js', 'package.json', 'public', '.deployment'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
-    else
-        powershell -Command "\$files = @('server.js', 'package.json', 'public'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
-    fi
+    echo "Using PowerShell script to ensure proper folder structure..."
+    
+    # Use inline PowerShell script that properly preserves folder structure
+    powershell -ExecutionPolicy Bypass -Command "\
+        if (Test-Path deployment.zip) { Remove-Item deployment.zip -Force }; \
+        \$tempDir = Join-Path \$env:TEMP \"deployment-$(Get-Random)\"; \
+        New-Item -ItemType Directory -Path \$tempDir -Force | Out-Null; \
+        Copy-Item -Path server.js,package.json,public -Destination \$tempDir -Recurse -Force; \
+        if (Test-Path .deployment) { Copy-Item -Path .deployment -Destination \$tempDir -Force }; \
+        Compress-Archive -Path \"\$tempDir\*\" -DestinationPath deployment.zip -Force; \
+        Write-Host '✓ Deployment package created'; \
+        \$verify = Join-Path \$env:TEMP \"verify-$(Get-Random)\"; \
+        Expand-Archive -Path deployment.zip -DestinationPath \$verify -Force; \
+        if (Test-Path \"\$verify\public\index.html\") { Write-Host '✓ Structure verified: public/index.html exists' } else { Write-Host '✗ ERROR: Structure incorrect!' }; \
+        Remove-Item -Recurse -Force \$verify,\$tempDir"
 fi
 
 # 14. Deploy the application to both Web Apps

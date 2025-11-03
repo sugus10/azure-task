@@ -35,21 +35,39 @@ if command -v zip &> /dev/null; then
     fi
 else
     echo "zip command not found, using PowerShell instead..."
-    # PowerShell Compress-Archive needs the folder itself, not just contents
-    # Create a temporary structure that preserves folders
-    if [ -f .deployment ]; then
-        powershell -Command "\$files = @('server.js', 'package.json', 'public', '.deployment'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
+    echo "Using dedicated PowerShell script to ensure proper folder structure..."
+    
+    # Check if we have the PowerShell script, if not, use inline script
+    if [ -f create-deployment-zip.ps1 ]; then
+        powershell -ExecutionPolicy Bypass -File create-deployment-zip.ps1
     else
-        powershell -Command "\$files = @('server.js', 'package.json', 'public'); Compress-Archive -Path \$files -DestinationPath deployment.zip -Force"
+        # Inline PowerShell script that properly preserves folder structure
+        echo "Creating zip with inline PowerShell script..."
+        powershell -ExecutionPolicy Bypass -Command "\
+            if (Test-Path deployment.zip) { Remove-Item deployment.zip -Force }; \
+            \$tempDir = Join-Path \$env:TEMP \"deployment-$(Get-Random)\"; \
+            New-Item -ItemType Directory -Path \$tempDir -Force | Out-Null; \
+            Copy-Item -Path server.js,package.json,public -Destination \$tempDir -Recurse -Force; \
+            if (Test-Path .deployment) { Copy-Item -Path .deployment -Destination \$tempDir -Force }; \
+            Compress-Archive -Path \"\$tempDir\*\" -DestinationPath deployment.zip -Force; \
+            Write-Host '✓ Deployment package created'; \
+            \$verify = Join-Path \$env:TEMP \"verify-$(Get-Random)\"; \
+            Expand-Archive -Path deployment.zip -DestinationPath \$verify -Force; \
+            if (Test-Path \"\$verify\public\index.html\") { Write-Host '✓ Structure verified: public/index.html exists' } else { Write-Host '✗ ERROR: Structure incorrect!' }; \
+            Remove-Item -Recurse -Force \$verify,\$tempDir"
     fi
 fi
 
 echo "Deployment package created. Verifying structure..."
 if command -v unzip &> /dev/null; then
     echo "Package contents:"
-    unzip -l deployment.zip | head -20
+    unzip -l deployment.zip | grep -E "public/|index.html|server.js|package.json" || echo "WARNING: public folder might not be included correctly"
+    echo ""
+    echo "Checking for public/index.html in package:"
+    unzip -l deployment.zip | grep "public/index.html" && echo "✓ public/index.html found" || echo "✗ WARNING: public/index.html NOT found in package!"
 elif command -v powershell &> /dev/null; then
-    powershell -Command "Expand-Archive -Path deployment.zip -DestinationPath temp-check -Force; Get-ChildItem -Recurse temp-check | Select-Object FullName; Remove-Item -Recurse -Force temp-check" 2>/dev/null || echo "Could not verify package structure"
+    echo "Verifying package structure with PowerShell:"
+    powershell -Command "\$temp = 'temp-check-$(Get-Random)'; Expand-Archive -Path deployment.zip -DestinationPath \$temp -Force; if (Test-Path \"\$temp\\public\\index.html\") { Write-Host '✓ public/index.html found in package' } else { Write-Host '✗ WARNING: public/index.html NOT found in package!'; Get-ChildItem -Recurse \$temp | Select-Object FullName }; Remove-Item -Recurse -Force \$temp" 2>/dev/null || echo "Could not verify package structure"
 fi
 
 # Ensure configuration is correct before deployment
