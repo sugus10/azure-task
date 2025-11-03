@@ -42,6 +42,29 @@ console.log('Setting up middleware...');
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve the main HTML page FIRST (before static middleware)
+app.get('/', (req, res) => {
+  try {
+    const indexPath = path.join(__dirname, 'public', 'index.html');
+    console.log('Root route hit. Serving index.html from:', indexPath);
+    // Send file with absolute path
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error sending index.html:', err);
+        console.error('Error details:', err.message);
+        res.status(500).send('Error loading page: ' + err.message);
+      } else {
+        console.log('Successfully sent index.html');
+      }
+    });
+  } catch (err) {
+    console.error('Error in root route handler:', err);
+    res.status(500).send('Error loading page: ' + err.message);
+  }
+});
+
+// Static files middleware (serves CSS, JS, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
 console.log('Middleware configured, static files from:', path.join(__dirname, 'public'));
@@ -297,17 +320,6 @@ app.delete('/api/items/:id', async (req, res) => {
   }
 });
 
-// Serve the main HTML page
-app.get('/', (req, res) => {
-  try {
-    const indexPath = path.join(__dirname, 'public', 'index.html');
-    console.log('Serving index.html from:', indexPath);
-    res.sendFile(indexPath);
-  } catch (err) {
-    console.error('Error serving index.html:', err);
-    res.status(500).send('Error loading page');
-  }
-});
 
 // Initialize database
 async function initializeDatabase() {
